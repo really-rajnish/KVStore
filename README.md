@@ -85,3 +85,22 @@ synchronisation — at each stage of the 12-week syllabus.
 Core Module I — in-memory hash table with GET/SET/DEL via REPL.
 EOF
 cat README.md
+
+
+
+## Current Stage
+
+Core Module I — hash table + KVStore API + parser + dispatcher + REPL.
+
+- [x] In-memory hash table (Week 1)
+- [x] KVStore API (Week 1)
+- [x] REPL (Week 1)
+- [x] Protocol parser (Week 3)
+- [x] Command dispatcher (Week 3)
+- [ ] TCP server and client (Week 4)
+- [ ] Signal-safe shutdown (Week 6)
+- [ ] Append-only log + startup replay (Week 7)
+- [ ] Log compaction + snapshots (Week 9)
+- [ ] Concurrent clients with striped locking (Week 10)
+- [ ] TTL expiry under concurrency (Week 11)
+- [ ] Packaging + benchmark + demo (Week 12)
