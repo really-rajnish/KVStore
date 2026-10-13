@@ -13,6 +13,9 @@ typedef enum {
     CMD_GET,
     CMD_DEL,
     CMD_COUNT,
+    CMD_EXPIRE,
+    CMD_TTL,
+    CMD_COMPACT,
     CMD_EXIT,
     CMD_QUIT
 } CommandType;
@@ -24,8 +27,6 @@ typedef struct {
     char         storage[PARSER_MAX_ARGS][PARSER_MAX_TOKEN];
 } ParsedCommand;
 
-/* Parse a single line into a ParsedCommand.
-   Returns false on empty input, unterminated quotes, or too many tokens. */
 bool parse_line(const char *line, ParsedCommand *out);
 
 CommandType command_type_from_name(const char *name);

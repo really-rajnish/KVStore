@@ -4,3 +4,5 @@ data/*
 *.out
 *.log
 core
+*.swp
+.*.swp

@@ -4,10 +4,7 @@
 #include <string.h>
 
 #define INITIAL_CAPACITY 16
-#define MAX_LOAD_FACTOR  0.75
 #define MIN_CAPACITY     8
-
-/* ---------- helpers ---------- */
 
 static char *xstrdup(const char *s)
 {
@@ -17,8 +14,7 @@ static char *xstrdup(const char *s)
     return p;
 }
 
-/* djb2 — Bernstein's classic string hash. */
-static unsigned long hash_djb2(const char *s)
+unsigned long hash_djb2(const char *s)
 {
     unsigned long h = 5381UL;
     int c;
@@ -27,8 +23,9 @@ static unsigned long hash_djb2(const char *s)
     return h;
 }
 
-static HTEntry *find_entry(const HashTable *ht, const char *key)
+HTEntry *ht_find_entry(const HashTable *ht, const char *key)
 {
+    if (!ht || !key || ht->capacity == 0) return NULL;
     size_t idx = (size_t)(hash_djb2(key) % ht->capacity);
     for (HTEntry *e = ht->buckets[idx].next; e != NULL; e = e->next)
         if (strcmp(e->key, key) == 0)
@@ -36,9 +33,10 @@ static HTEntry *find_entry(const HashTable *ht, const char *key)
     return NULL;
 }
 
-/* Rehash every entry into a new bucket array. */
-static bool ht_resize(HashTable *ht, size_t new_capacity)
+bool ht_resize_table(HashTable *ht, size_t new_capacity)
 {
+    if (!ht || new_capacity <= ht->capacity) return false;
+
     HTEntry *nb = calloc(new_capacity, sizeof *nb);
     if (!nb) return false;
 
@@ -59,8 +57,6 @@ static bool ht_resize(HashTable *ht, size_t new_capacity)
     return true;
 }
 
-/* ---------- public API ---------- */
-
 HashTable *ht_create(size_t initial_capacity)
 {
     if (initial_capacity < MIN_CAPACITY)
@@ -76,7 +72,7 @@ HashTable *ht_create(size_t initial_capacity)
     }
 
     ht->capacity = initial_capacity;
-    ht->size     = 0;
+    atomic_init(&ht->size, 0);
     return ht;
 }
 
@@ -99,29 +95,26 @@ void ht_destroy(HashTable *ht)
     free(ht);
 }
 
-bool ht_set(HashTable *ht, const char *key, const char *value)
+bool ht_set_ttl(HashTable *ht, const char *key, const char *value, int64_t expire_at_ms)
 {
     if (!ht || !key || !value) return false;
 
-    if ((double)(ht->size + 1) / (double)ht->capacity > MAX_LOAD_FACTOR) {
-        if (!ht_resize(ht, ht->capacity * 2))
-            return false;
-    }
-
-    HTEntry *existing = find_entry(ht, key);
+    HTEntry *existing = ht_find_entry(ht, key);
     if (existing) {
         char *nv = xstrdup(value);
         if (!nv) return false;
         free(existing->value);
         existing->value = nv;
+        existing->expire_at_ms = expire_at_ms;
         return true;
     }
 
     HTEntry *ne = malloc(sizeof *ne);
     if (!ne) return false;
 
-    ne->key   = xstrdup(key);
-    ne->value = xstrdup(value);
+    ne->key          = xstrdup(key);
+    ne->value        = xstrdup(value);
+    ne->expire_at_ms = expire_at_ms;
     if (!ne->key || !ne->value) {
         free(ne->key);
         free(ne->value);
@@ -132,14 +125,19 @@ bool ht_set(HashTable *ht, const char *key, const char *value)
     size_t idx = (size_t)(hash_djb2(key) % ht->capacity);
     ne->next = ht->buckets[idx].next;
     ht->buckets[idx].next = ne;
-    ht->size++;
+    atomic_fetch_add(&ht->size, 1);
     return true;
+}
+
+bool ht_set(HashTable *ht, const char *key, const char *value)
+{
+    return ht_set_ttl(ht, key, value, 0);
 }
 
 char *ht_get(HashTable *ht, const char *key)
 {
     if (!ht || !key) return NULL;
-    HTEntry *e = find_entry(ht, key);
+    HTEntry *e = ht_find_entry(ht, key);
     return e ? e->value : NULL;
 }
 
@@ -156,7 +154,7 @@ bool ht_del(HashTable *ht, const char *key)
             free(e->key);
             free(e->value);
             free(e);
-            ht->size--;
+            atomic_fetch_sub(&ht->size, 1);
             return true;
         }
     }
@@ -165,5 +163,5 @@ bool ht_del(HashTable *ht, const char *key)
 
 size_t ht_size(const HashTable *ht)
 {
-    return ht ? ht->size : 0;
+    return ht ? (size_t)atomic_load(&ht->size) : 0;
 }

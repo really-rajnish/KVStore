@@ -2,8 +2,6 @@
 
 #include <string.h>
 
-/* ---------------- token reader ---------------- */
-
 typedef enum { TOK_OK, TOK_END, TOK_ERR } TokStatus;
 
 static TokStatus read_token(const char **p, char *out, size_t cap)
@@ -41,34 +39,36 @@ static TokStatus read_token(const char **p, char *out, size_t cap)
     return TOK_OK;
 }
 
-/* ---------------- command table ---------------- */
-
 CommandType command_type_from_name(const char *name)
 {
     if (!name) return CMD_UNKNOWN;
-    if (strcmp(name, "SET")   == 0) return CMD_SET;
-    if (strcmp(name, "GET")   == 0) return CMD_GET;
-    if (strcmp(name, "DEL")   == 0) return CMD_DEL;
-    if (strcmp(name, "COUNT") == 0) return CMD_COUNT;
-    if (strcmp(name, "EXIT")  == 0) return CMD_EXIT;
-    if (strcmp(name, "QUIT")  == 0) return CMD_QUIT;
+    if (strcmp(name, "SET")     == 0) return CMD_SET;
+    if (strcmp(name, "GET")     == 0) return CMD_GET;
+    if (strcmp(name, "DEL")     == 0) return CMD_DEL;
+    if (strcmp(name, "COUNT")   == 0) return CMD_COUNT;
+    if (strcmp(name, "EXPIRE")  == 0) return CMD_EXPIRE;
+    if (strcmp(name, "TTL")     == 0) return CMD_TTL;
+    if (strcmp(name, "COMPACT") == 0) return CMD_COMPACT;
+    if (strcmp(name, "EXIT")    == 0) return CMD_EXIT;
+    if (strcmp(name, "QUIT")    == 0) return CMD_QUIT;
     return CMD_UNKNOWN;
 }
 
 const char *command_type_name(CommandType t)
 {
     switch (t) {
-        case CMD_SET:   return "SET";
-        case CMD_GET:   return "GET";
-        case CMD_DEL:   return "DEL";
-        case CMD_COUNT: return "COUNT";
-        case CMD_EXIT:  return "EXIT";
-        case CMD_QUIT:  return "QUIT";
-        default:        return "UNKNOWN";
+        case CMD_SET:     return "SET";
+        case CMD_GET:     return "GET";
+        case CMD_DEL:     return "DEL";
+        case CMD_COUNT:   return "COUNT";
+        case CMD_EXPIRE:  return "EXPIRE";
+        case CMD_TTL:     return "TTL";
+        case CMD_COMPACT: return "COMPACT";
+        case CMD_EXIT:    return "EXIT";
+        case CMD_QUIT:    return "QUIT";
+        default:          return "UNKNOWN";
     }
 }
-
-/* ---------------- public API ---------------- */
 
 bool parse_line(const char *line, ParsedCommand *out)
 {
